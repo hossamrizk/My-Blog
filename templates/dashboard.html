@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endfor %}
+
+<div class="container">
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>
+                    <strong>User Information:</strong>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>First Name: </strong>{{ current_user.first_name }}</li>
+                        <li class="list-group-item"><strong>Second Name: </strong>{{ current_user.second_name }}</li>
+                        <li class="list-group-item"><strong>Username: </strong>{{ current_user.username }}</li>
+                        <li class="list-group-item"><strong>User Id: </strong>{{ current_user.id }}</li>
+                        <li class="list-group-item"><strong>Email: </strong>{{ current_user.email }}</li>
+                        <li class="list-group-item"><strong>Favourite Colour: </strong>{{ current_user.favourite_color }}</li>
+                        <li class="list-group-item"><strong>About Author: </strong>{{ current_user.about_author }}</li>
+                        <li class="list-group-item"><strong>Date Joined: </strong>{{ current_user.date_added }}</li>
+                    </ul>
+                </td>
+                <td class="text-end">
+                    <img src="{{ url_for('static', filename='images/profile pic.png') }}" class="img-fluid" alt="Profile Picture" style="max-width: 300px;">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+            <a href="{{ url_for('update', id=current_user.id)}}" class="btn btn-primary">Update</a>
+            <a href="{{ url_for('delete', id=current_user.id)}}" class="btn btn-secondary">Delete</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

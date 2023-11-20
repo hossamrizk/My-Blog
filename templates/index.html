@@ -1,14 +1,19 @@
-<h1>Hello world</h1>
-<p>This is my first webpage!!!</p>
-<p>Hello from {{first_name}}</p>
-<p>{{stuff|capitalize}}</p>
-<p>{{stuff|title}}</p>
-<p>{{stuff|striptags}}</p>
-<h3>Favourite subjects are:</h3>
-{% for sub in favourite %}
-    {% if sub == 41 %}
-        {{ sub + 100 }}<br/>
-    {% else %}
-        {{sub}}<br/>
-    {% endif %}
-{% endfor %}
+
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Hello world</h1>
+    <p>This is my first webpage!!!</p>
+    <p>Hello from {{first_name}}</p>
+    <p>{{stuff|capitalize}}</p>
+    <p>{{stuff|title}}</p>
+    <p>{{stuff|striptags}}</p>
+    <h3>Favourite subjects are:</h3>
+    {% for sub in favourite %}
+        {% if sub == 41 %}
+            {{ sub + 100 }}<br/>
+        {% else %}
+            {{sub}}<br/>
+        {% endif %}
+    {% endfor %}
+{% endblock %}

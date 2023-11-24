@@ -13,11 +13,36 @@
 <div class="shadow-lg p-3 mb-5 bg-body-tertiary rounded">
 <h2>{{ post.title }}</h2>
     By: {{ post.poster.username }}</br>
-    {% if post.poster.bio %}
-        Bio: {{ post.poster.bio }}</br>
-    {% endif %}
     <strong>Content: {{ post.content|safe }}</strong></br>
     Date of this post: {{ post.date_posted }}</br></br>
+
+<div class="card mb-3">
+    <div class="row no-gutters">
+        <div class="col-md-2">
+            {% if post.poster.profile_pic %}
+                <img src="{{ url_for('static', filename='images/' + post.poster.profile_pic)}}" width="150" align="left">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/profile pic.png')}}" width="150" align="left">
+            {% endif %}
+        </div>
+
+        <div class="col-md-10">
+            <div class="card-body">
+                <h5 class="card-title">
+                    {{ post.poster.username }}
+                </h5>
+<p class="card-text">
+    {% if post.poster.bio %}
+        Bio: {{ post.poster.bio }}</p>
+    {% else %}
+        No Bio For This User
+    {% endif %}
+    </div>
+        </div>
+    </div>
+</div>
+</p>
+
     </br>
     <a href="{{ url_for('posts_func') }}"class="btn btn-outline-secondary">Back to Blog</a>
     {% if post.poster_id == current_user.id or current_user.id == 7 %}

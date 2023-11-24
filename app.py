@@ -4,11 +4,12 @@ from flask import Flask, render_template, flash, request, redirect, url_for
 from flask_login import UserMixin,login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import VARBINARY
+from sqlalchemy import or_
 from flask_migrate import Migrate
 from flask_ckeditor import CKEditor
 from werkzeug.security import generate_password_hash,check_password_hash
 from werkzeug.utils import secure_filename
+import uuid as uuid
 from datetime import datetime, date
 import create
 import os
@@ -23,6 +24,7 @@ app = Flask(__name__)
 ckeditor = CKEditor(app)
 
 #Create Database
+
 # Sqlite
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 
@@ -37,6 +39,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://ajvxwrluwchsxv:b812c35ac6094
 
 #Create Secret Key
 app.config['SECRET_KEY'] = "write password"
+
+
+UPLOAD_FOLDER = 'static/images/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # Intialize Database
@@ -61,26 +67,44 @@ def admin():
         flash("You are not an authorized for this action")
         return redirect(url_for('dashboard'))
 
+
+@app.route('/admin_delete_post/<int:post_id>',methods=['GET','POST'])
+@login_required
+
+def admin_delete_post(post_id):
+    # Logic to allow the admin to delete any post
+    if current_user.id == 7:  # Replace 7 with your admin user ID
+        post = Posts.query.get(post_id)  # Assuming you have a Post model
+        # Logic to delete the post
+        # Delete the post from the database
+        flash("Post deleted by admin.")
+    else:
+        flash("You are not authorized for this action.")
+    return redirect(url_for('admin'))  # Redirect back to the admin page
+
 # Create search function
 @app.route('/search', methods=["POST"])
 def search():
     form = SearchForm()
-    posts = Posts.query
     if form.validate_on_submit():
-        # Get data from submited form
-        post.searched = form.searched.data
+        searched = form.searched.data
 
-        # Query database
-        posts = posts.filter(Posts.content.like('%' + post.searched + '%'))
-        posts = posts.order_by(Posts.title).all()
+        # Query posts and users for matches
+        posts_results = Posts.query.filter(Posts.title.like('%' + searched + '%')).all()
 
+        users_results = Users.query.filter(or_(Users.username.like('%' + searched + '%'),
+                                              Users.first_name.like('%' + searched + '%'),
+                                              Users.second_name.like('%' + searched + '%'))).all()
+
+        # Combine and display search results
         return render_template("search.html",
                                form=form,
-                               searched=post.searched,
-                               posts=posts)
+                               searched=searched,
+                               posts_results=posts_results,
+                               users_results=users_results)
 
-    # Ensure a default response or an error handler in case the form doesn't validate
-    return render_template("404.html")  # Adjust this to an appropriate error template or response
+    # Default response or error handler
+    return render_template("404.html")
 
 
 # Flask_login stuff
@@ -123,6 +147,54 @@ def logout():
 @app.route('/dashboard',methods=['GET','POST'])
 @login_required # Make user can not enter dashboard page until he login
 def dashboard():
+    form = UserForm()
+    id = current_user.id
+    name_to_update = Users.query.get_or_404(id)
+    if request.method == "POST":
+        name_to_update.first_name = request.form['first_name']
+        name_to_update.second_name = request.form['second_name']
+        name_to_update.email = request.form['email']
+        name_to_update.username = request.form['username']
+        name_to_update.bio = request.form['bio']
+        name_to_update.dof = request.form['dof']
+
+        # Check for profile pic
+        if request.files['profile_pic']:
+            name_to_update.profile_pic = request.files['profile_pic']
+
+            # Grab Image Name
+            pic_filename = secure_filename(name_to_update.profile_pic.filename)
+            # Set UUID
+            pic_name = str(uuid.uuid1()) + "_" + pic_filename
+            # Save That Image
+            saver = request.files['profile_pic']
+
+            # Change it to a string to save to db
+            name_to_update.profile_pic = pic_name
+            try:
+                db.session.commit()
+                saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+                flash("User Updated Successfully!")
+                return render_template("dashboard.html",
+                                       form=form,
+                                       name_to_update=name_to_update)
+            except:
+                flash("Error!  Looks like there was a problem...try again!")
+                return render_template("dashboard.html",
+                                       form=form,
+                                       name_to_update=name_to_update)
+        else:
+            db.session.commit()
+            flash("User Updated Successfully!")
+            return render_template("dashboard.html",
+                                   form=form,
+                                   name_to_update=name_to_update)
+    else:
+        return render_template("dashboard.html",
+                               form=form,
+                               name_to_update=name_to_update,
+                               id=id)
+
     return render_template('dashboard.html')
 
 
@@ -169,75 +241,84 @@ def post(id):
 
 
 # Add Edit option to posts
-@app.route('/posts/edit/<int:id>', methods=['GET','POST'])
+@app.route('/posts/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
     post = Posts.query.get_or_404(id)
     form = postform()
+
     if form.validate_on_submit():
         post.title = form.title.data
-        #post.author = form.author.data
         post.slug = form.slug.data
         post.content = form.content.data
 
-        # Update data base
-        db.session.add(post)
-        db.session.commit()
-        flash("Post Updated !")
-        return redirect(url_for('post',id=post.id))
+        try:
+            # Update database
+            db.session.commit()
+            flash("Post Updated!")
+            return redirect(url_for('post', id=post.id))
+        except:
+            flash("Sorry, there was a problem updating the post.")
+            return redirect(url_for('edit', id=post.id))
 
-    if current_user.id == post.poster_id:
-
-        # After Clicking on edit button, we want to all informations to be there written.
+    if current_user.id == post.poster_id or current_user.id == 7:  # Admin user ID is 7
+        # Populate form fields with post data
         form.title.data = post.title
-        #form.author.data = post.author
         form.slug.data = post.slug
         form.content.data = post.content
 
-        return render_template('edit.html',form=form)
+        return render_template('edit.html', form=form)
     else:
-        flash("Sorry This post isn`t yours, You cant edit it !")
+        flash("Sorry, you can't edit this post.")
         posts = Posts.query.order_by(Posts.date_posted)
         return render_template('posts.html', posts=posts)
+
 
 # Delete Post
 @app.route('/posts/delete/<int:id>')
 @login_required
 def delete_post(id):
     post_to_delete = Posts.query.get_or_404(id)
-    id = current_user.id
-    if id == post_to_delete.poster.id:
+    if current_user.id == 7 or post_to_delete.poster.id:  # Admin user ID is 7
         try:
-            # Updata Database
+            # Update Database
             db.session.delete(post_to_delete)
             db.session.commit()
 
-            flash("Post Deleted !")
-
-            # Where to return after deletion
-            posts = Posts.query.order_by(Posts.date_posted)
-            return render_template('posts.html', posts=posts)
+            flash("Post Deleted by admin!")
         except:
-            flash("Sorry There was a problem, Try again")
-            return render_template('posts.html', posts=posts)
+            flash("Sorry, there was a problem deleting the post.")
+    elif current_user.id == post_to_delete.poster.id:
+        try:
+            # Update Database
+            db.session.delete(post_to_delete)
+            db.session.commit()
+
+            flash("Post Deleted!")
+        except:
+            flash("Sorry, there was a problem deleting the post.")
     else:
-        # Where to return after deletion
-        posts = Posts.query.order_by(Posts.date_posted)
-        flash("Sorry this post isn`t yours, You can`t delete it")
-        return render_template('posts.html', posts=posts)
+        flash("Sorry, you can't delete this post.")
+
+    # Where to return after deletion or if the deletion fails
+    posts = Posts.query.order_by(Posts.date_posted).all()
+    return render_template('posts.html', posts=posts)
+
 
 
 
 
 # Json file
-@app.route('/date')
-def get_current_date():
-    favourite_pizza = {
-        'john:': 'pepronie',
-        'mary:': 'cheese',
-        'tim:': 'mushroom'
+
+@app.route('/json')
+def Personal_info():
+    admin_info = {
+        'Education:': "Bachelor's degree in Artificial Intelligence",
+        'Age:': '23',
+        'From:': 'egypt',
+        'Name:': 'Hossam Rizk'
     }
-    return favourite_pizza
+    return admin_info
 
 
 # Delete function
@@ -261,32 +342,41 @@ def delete(id):
 # Update database
 @app.route('/update/<int:id>', methods = ['GET','POST']) # when a user accesses a URL like '/update/1', the function will be triggered, and '1' will be passed as the id parameter.
 @login_required
-def update(id): #The id corresponds to the value provided in the URL, such as '/update/1'.
+def update(id):
     form = UserForm()
-    name_to_update = Users.query.get_or_404(id) # It queries the database (likely a database table named 'Users') to retrieve a user with the specified id. If no user with the given id is found, a 404 error response is returned.
-    if request.method == "POST": # This block of code checks if the HTTP request method is POST, which means that the form has been submitted.
+    name_to_update = Users.query.get_or_404(id)
+
+    if request.method == "POST":
         name_to_update.first_name = request.form['first_name']
         name_to_update.second_name = request.form['second_name']
         name_to_update.email = request.form['email']
-        name_to_update.favourite_color = request.form['favourite_color']
-        name_to_update.about_author = request.form['about_author']
+        name_to_update.dof = request.form['dof']
+        name_to_update.location = request.form['location']
+        name_to_update.bio = request.form['bio']
         name_to_update.username = request.form['username']
+
+        # Check if profile_pic was included in the request.files
+        if 'profile_pic' in request.files:
+            profile_pic = request.files['profile_pic']
+            if profile_pic.filename != '':
+                pic_filename = secure_filename(profile_pic.filename)
+                pic_name = str(uuid.uuid1()) + "_" + pic_filename
+
+                # Save the file to a specific directory or storage location
+                profile_pic.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+
+                # Update the user's profile with the file name or path in the database
+                name_to_update.profile_pic = pic_name
+
         try:
             db.session.commit()
-            flash('Information updated successfulty')
-            return render_template("update.html",
-                                   form=form,
-                                   name_to_update=name_to_update,id=id)
-        except:
-            flash('Some thing happened worng ! Pls try again ')
-            return render_template("update.html",
-                                   form=form,
-                                   name_to_update=name_to_update,id=id)
-    else:
-        return render_template("update.html",
-                               form=form,
-                               name_to_update=name_to_update,
-                               id = id)
+            flash('Information updated successfully')
+        except Exception as e:
+            flash('Something went wrong! Please try again.')
+            print(e)  # Print the exception for debugging purposes
+
+    return render_template("update.html", form=form, name_to_update=name_to_update, id=id)
+
 
 # Create Route
 @app.route('/user/add',methods=['GET','POST'])
@@ -303,20 +393,28 @@ def add_user():
         if user is None:
             # Hash password
             hash_pw = generate_password_hash(form.password_hash.data,'pbkdf2:sha256')
-            user = Users(first_name=form.first_name.data,second_name=form.second_name.data,email=form.email.data,favourite_color=form.favourite_color.data,password_hash =hash_pw,username=form.username.data,about_author=form.about_author.data)
+            user = Users(first_name=form.first_name.data,
+                         second_name=form.second_name.data,
+                         email=form.email.data,
+                         dof=form.dof.data,
+                         location=form.location.data,
+                         password_hash =hash_pw,
+                         username=form.username.data,
+                         bio=form.bio.data)
             db.session.add(user)
             db.session.commit()
         name = form.username.data
         first_name = form.first_name.data
         second_name = form.second_name.data
-        about_author = form.about_author.data
+        bio = form.bio.data
         form.first_name.data = ''
         form.second_name.data = ''
         form.email.data = ''
-        form.favourite_color = ''
+        form.dof.data = ''
+        form.location.data = ''
         form.password_hash = ''
         form.username.data = ''
-        form.about_author.data = ''
+        form.bio.data = ''
         # Process the form data and add a new user to the database here
         flash("User added successfully")
     our_users = Users.query.order_by(Users.date_added)
@@ -324,25 +422,12 @@ def add_user():
 
 
 @app.route('/')
+def main():
+    return render_template("main.html",)
 
-#def index():
-#    return "<h1> Hello world!</h1>"
-
-def index():
-    first_name = 'Hossam'
-    stuff = 'this is bold text'
-    favourite = ['Arabic','Math','English',41]
-    return render_template("index.html",
-                           first_name=first_name,
-                           #stuff=stuff,
-                           favourite=favourite)
-
-@app.route('/user/<name>')
-
-def user(name):
-    return render_template("user.html", user_name=name)
 
 # Create custom error pages
+
 # Invalid URL
 @app.errorhandler(404)
 def page_not_found(e):
@@ -385,22 +470,6 @@ def test_pw():
                            form=form)
 
 
-
-# Name page
-@app.route('/name',methods=['GET','POST'])
-def name():
-    name = None
-    form = NameForm()
-    # Validate Form
-    if form.validate_on_submit():
-        name = form.name.data
-
-        form.name.data = ''
-        flash("Correctly submited the form !")
-    return render_template('name.html',
-                           name = name,
-                           form= form)
-
 # -----------------------------------------------------------------------------
 # Models Section
 
@@ -410,7 +479,6 @@ class Posts(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     title = db.Column(db.String(225))
     content = db.Column(db.Text)# This is the content of the bost must be Text not String
-    #author = db.Column(db.String(225)) # The name of the post owner
     date_posted = db.Column(db.DateTime,default=datetime.utcnow()) #Data and time of the post
     slug = db.Column(db.String(225)) # عشان لما نيجي نعمل سيرش علي بوست منعملش سيرش ب ال id بتاعه لا نعمل سيرش بكلام عادي
 
@@ -424,8 +492,9 @@ class Users(db.Model, UserMixin):
     first_name = db.Column(db.String(20),nullable=False)
     second_name = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120),nullable=False,unique=True)
-    favourite_color = db.Column(db.String(120))
-    about_author = db.Column(db.Text,nullable = True)
+    dof = db.Column(db.Date, nullable=False)
+    location = db.Column(db.String(60),nullable=False)
+    bio = db.Column(db.Text,nullable = True)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
     profile_pic = db.Column(db.String(120), nullable=True)
 

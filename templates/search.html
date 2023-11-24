@@ -1,32 +1,44 @@
 {% extends 'base.html' %}
 {% block content %}
 <br/>
-<h2>You searched for: <em>{{ searched }}</h2></em>
-</br>
-These are results for your search
+<h2>You searched for: <em>{{ searched }}</em></h2>
 <br/>
-<br/>
-{% if posts%}
 
-{% for post in posts %}
-<div class="shadow-lg p-3 mb-5 bg-body-tertiary rounded">
-<h2>{{ post.title }}</h2>
-    By: {{ post.poster.username }}</br>
-    {{ post.date_posted }}</br>
-    {{ post.content|safe }}</br></br>
-    </br>
-    <a href="{{ url_for('post',id=post.id) }}"class="btn btn-outline-secondary">View Post </a>
-    {% if post.poster_id == current_user.id %}
-    <a href="{{ url_for('edit',id=post.id) }}"class="btn btn-outline-secondary">Edit Post </a>
-    <a href="{{ url_for('delete_post',id=post.id) }}"class="btn btn-outline-danger">Delete Post </a>
-    {% endif %}
-</div>
-
-{% endfor %}
-
+{% if posts_results %}
+  <h3>Posts</h3>
+  {% for post in posts_results %}
+    <div class="shadow-lg p-3 mb-5 bg-body-tertiary rounded">
+      <h2>{{ post.title }}</h2>
+      By: {{ post.poster.username }}</br>
+      {{ post.date_posted }}</br>
+      {{ post.content|safe }}</br></br>
+      <a href="{{ url_for('post', id=post.id) }}" class="btn btn-outline-secondary">View Post</a>
+      {% if post.poster_id == current_user.id %}
+        <a href="{{ url_for('edit', id=post.id) }}" class="btn btn-outline-secondary">Edit Post</a>
+        <a href="{{ url_for('delete_post', id=post.id) }}" class="btn btn-outline-danger">Delete Post</a>
+      {% endif %}
+    </div>
+  {% endfor %}
 {% else %}
-Sorry, There isn`t any results..
+  <p>No post results found.</p>
+{% endif %}
 
+{% if users_results %}
+  <h3>Users</h3>
+  {% for user_result in users_results %}
+    <div class="shadow-lg p-3 mb-5 bg-body-tertiary rounded">
+      <h2>Username: {{ user_result.username }}</h2>
+      Name: {{ user_result.first_name }} {{ user_result.second_name }}</br>
+      Location: {{ user_result.location }}</br>
+      Bio: {{ user_result.bio }}</br></br>
+      <a href="{{ url_for('dashboard', id=user_result.id) }}" class="btn btn-primary">User Profile</a>
+      {% if current_user.is_authenticated and (current_user.id == 7 or user_result.id == current_user.id) %}  {# Assuming admin ID is 7 #}
+        <a href="{{ url_for('delete', id=user_result.id) }}" class="btn btn-danger">Delete Account</a>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% else %}
+  <p>No user results found.</p>
 {% endif %}
 
 {% endblock %}

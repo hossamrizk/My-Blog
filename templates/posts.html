@@ -14,14 +14,14 @@
 <div class="shadow-lg p-3 mb-5 bg-body-tertiary rounded">
 <h2>{{ post.title }}</h2>
     By: {{ post.poster.username }}</br>
-    {% if post.poster.about_author %}
-        About Author: {{ post.poster.about_author }}</br>
+    {% if post.poster.bio %}
+        Bio: {{ post.poster.bio }}</br>
     {% endif %}
     {{ post.date_posted }}</br>
     {{ post.content|safe }}</br></br>
     </br>
     <a href="{{ url_for('post',id=post.id) }}"class="btn btn-outline-secondary">View Post </a>
-    {% if post.poster_id == current_user.id %}
+    {% if post.poster_id == current_user.id or current_user.id == 7 %}
     <a href="{{ url_for('edit',id=post.id) }}"class="btn btn-outline-secondary">Edit Post </a>
     <a href="{{ url_for('delete_post',id=post.id) }}"class="btn btn-outline-danger">Delete Post </a>
     {% endif %}

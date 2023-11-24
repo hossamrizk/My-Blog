@@ -363,7 +363,7 @@ def index():
     first_name = 'Hossam'
     stuff = 'this is bold text'
     favourite = ['Arabic','Math','English',41]
-    return render_template("index.html",
+    return render_template("main.html",
                            first_name=first_name,
                            #stuff=stuff,
                            favourite=favourite)

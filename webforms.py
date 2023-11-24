@@ -4,7 +4,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from flask_ckeditor import CKEditorField
-from wtforms import StringField, SubmitField,PasswordField, BooleanField, ValidationError, TextAreaField
+from wtforms import StringField, DateField,SubmitField,PasswordField, BooleanField, ValidationError, TextAreaField
 from wtforms.validators import data_required, EqualTo, Length, DataRequired
 from wtforms.widgets import TextArea
 
@@ -43,8 +43,12 @@ class UserForm(FlaskForm):
                        validators=[data_required()])
     email = StringField('E-mail:',
                        validators=[data_required()])
-    favourite_color = StringField('Favourite Colour')
-    about_author = TextAreaField('About Author')
+    dof = DateField('Date or birth:',
+                    validators=[data_required()])
+
+    location = StringField('Country:',
+                           validators=[data_required()])
+    bio = TextAreaField('About Me')
     password_hash = PasswordField('password',validators=[data_required(),
                                                          EqualTo('password_hash2',message='Password Must Match!')])
     password_hash2 =PasswordField('Confirm Password',validators=[data_required()])

@@ -12,8 +12,8 @@ This Flask Blog repository houses a blog application created using Flask. It's t
 
 To run this application locally, follow these steps:
 
-1. Clone the repository: `git clone https://github.com/hossamrizk/fi.git`
-2. Navigate to the project directory: `cd flask-blog`
+1. Clone the repository: `git clone https://github.com/hossamrizk/My-Blog.git`
+2. Navigate to the project directory: `cd My-Blog`
 3. Create a virtual environment: `python -m venv venv`
 4. Activate the virtual environment:
    - On Windows: `venv\Scripts\activate`

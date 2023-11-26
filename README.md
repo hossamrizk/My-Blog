@@ -46,6 +46,4 @@ If you'd like to contribute to this project, feel free to open an issue or submi
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
 
-*Please note that this README is a basic outline and can be expanded upon with more detailed information about the project's structure, features, and deployment instructions.*
